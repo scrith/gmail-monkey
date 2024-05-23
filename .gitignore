@@ -1,0 +1,15 @@
+# Ignore everything
+**/**
+*.ignore
+
+# Keep js and markdown
+!*.js
+!*.md
+!wiki/**
+!*.template
+!appscript.json
+
+# This will be your file with your filters
+# don't put it back in the repo
+# It will be rejected
+MyFilters.js

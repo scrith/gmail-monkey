@@ -1,0 +1,235 @@
+function setVariables() {
+  /** ********** RETENTION NOTE **********
+   * Think carefully about security and company policy before you apply retention labels
+   * 
+   * Read the README
+   * 
+   * To use, run the "install" function and all needed triggers will be created
+   * To remove, run the "uninstall" function
+   * 
+   */
+
+  /** These are really important variables, read all this before changing them
+   * -a note about balancing-
+   * BATCH_SIZE is the max digestable amount in single pass
+   * 500 is the max allowable - don't use that. EVER.
+   * Use BATCH_SIZE = 50
+   * The smaller size is  more efficient even if it causes multiple passes
+   * the execution time rises exponentially (still working out why)
+   * 10x batches of 50 takes MUCH less time then 1x batch of 500
+   * 
+   * INBOX_PROCESS_INTERVAL is the repeating schedule of a "first" pass
+   * Interval of 5 is a reasonable upper limit
+   * 3 might work for low-volume inboxes
+   * 1 is too small and will likely cause failures in the scheduling
+   * 
+   * RESCHEDULE_DELAY = 60
+   * The delay is the time (in seconds) betweek pass "1" and pass "2" ... pass "N"
+   * it needs to remain very small so that a second pass (or a 3rd)
+   * */
+
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+// [                    TIMING                      ]
+// +------------------------------------------------+
+  BATCH_SIZE = 50;//pretty much never change this
+
+  // maintenance level processing
+  INBOX_PROCESS_INTERVAL = 5;
+  RESCHEDULE_DELAY = 60;
+  // if you average more than 1 messages every 6 seconds
+  // I don't think I can help you. (you definitely need help)
+  // you might check into a server-based solution to do local IMAP processing
+
+// +------------------------------------------------+
+  SHOULD_REPROCESS_ALL_EMAILS = false;
+    // this will take a very very long time, and then likely fail on ratelimits
+    // it is very difficult to test this effectively on my inbox because I've already tidied up
+
+// +------------------------------------------------+
+  PROCESSED_MATCHED_LABEL = "m";
+  PROCESSED_UNMATCHED_LABEL = PROCESSED_MATCHED_LABEL+"/u";
+  PROCESSED_FAILED_LABEL = PROCESSED_MATCHED_LABEL+"/Exception"
+
+// +------------------------------------------------+
+  if (SHOULD_REPROCESS_ALL_EMAILS) {
+    INBOX_PROCESS_INTERVAL = 5;
+    RESCHEDULE_DELAY = 3*60; // aim for speed, but avoid ratelimits
+    // 50 threads every 3 minutes = 24,000 threads/day
+    // <=15 gmail calls/message
+    // ~10 messages/thread
+    // 3.6M API calls / 24 hours
+    SEARCH_QUERY = "in:all\
+      !(label:"+PROCESSED_MATCHED_LABEL+")\
+      !(label:"+PROCESSED_UNMATCHED_LABEL+")\
+      !(label:"+PROCESSED_FAILED_LABEL+")";
+  } else {
+    // this will be the default query
+    SEARCH_QUERY = "in:all newer_than:1h\
+      !(label:"+PROCESSED_MATCHED_LABEL+")\
+      !(label:"+PROCESSED_UNMATCHED_LABEL+")\
+      !(label:"+PROCESSED_FAILED_LABEL+")";
+  }
+
+// +------------------------------------------------+
+// [               end TIMING end                   ]
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+
+
+
+
+
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+// [                 VARIABLES                      ]
+// +------------------------------------------------+
+// "*_PARENT_LABEL" variables should end with a trailing "/"
+// "*_LABEL" (without "_PARENT_") should not
+// +------------------------------------------------+
+SHOULD_PROCESS_MAILING_LISTS = false;                // will automatically create labels for mailing list emails
+SHOULD_ARCHIVE_MAILING_LISTS = false;               // will automatically archive any emails received on mailing lists
+MAILING_LIST_PARENT_LABEL = "lists/";
+
+// +------------------------------------------------+
+//off by default
+SHOULD_PROCESS_CHATS = false;                       // missed chats are placed inside the inbox and look like emails
+                                                    // this will label them so you can more easily manage them
+CHAT_LABEL = "chats";
+
+// +------------------------------------------------+
+//off by default
+SHOULD_RENAME_TAGS = false;                         // process rules found in "TagsToRename"
+
+// +------------------------------------------------+
+//off by default
+SHOULD_APPLY_ATTENTION = false;                     // enables the nightly process to archive emails older than the specified flags.
+                                                    // any valid sublabel can be made manually
+                                                      // it must be in the format of "[0-9]*[dmy]"
+                                                      // ex: "y/3d" = archive after 3 days
+                                                      // ex: "y/6m" = archive after 6 months
+                                                      // ex: "y/7y" = archive after 7 years
+ATTENTION_PARENT_LABEL = "z/";
+
+// +------------------------------------------------+
+//off by default
+SHOULD_APPLY_RETENTION = false;                     // enables the nightly process to delete emails older than the specified flags.
+                                                    // any valid sublabel can be made manually
+                                                      // it must be in the format of "[0-9]*[dmy]"
+                                                      // ex: "x/3d" = delete after 3 days
+                                                      // ex: "x/6m" = delete after 6 months
+                                                      // ex: "x/7y" = delete after 7 years
+RETENTION_PARENT_LABEL = "x/";
+
+// +------------------------------------------------+
+//off by default
+SHOULD_PRUNE_LABELS = false;                        // deletes empty labels
+                                                    // recommended when "SHOULD_APPLY_RETENTION = true"
+
+// +------------------------------------------------+
+//off by default
+SHOULD_UNIMPORTANT_LABELS = false;                  // removes the gmail automated 'important' mark
+
+// +------------------------------------------------+
+// [             end VARIABLES end                  ]
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+
+
+
+
+
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+// [             CUSTOM VARIABLES                   ]
+// +------------------------------------------------+
+// In this section you can also create your own variables to be used as shorthand in your filter entries
+  EXPENSE_REPORT_LABEL = "expense&travel";
+  SFDC = "postmaster@salesforce.com";
+  
+// +------------------------------------------------+
+// [          end CUSTOM VARIABLES end              ]
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+
+
+
+
+
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+// [                  RETENTION                     ]
+// +------------------------------------------------+
+// This defines the default retention period for mailing lists processed by "SHOULD_PROCESS_MAILING_LISTS = true"
+  MAILING_LIST_RETENTION_LABEL = RETENTION_PARENT_LABEL+"18m";
+
+// This narrows the scope of parent labels to remove empty sublabels from when "SHOULD_PRUNE_LABELS = true"
+  PARENT_LABELS_TO_PRUNE = [
+    MAILING_LIST_PARENT_LABEL,
+  ];
+
+// +------------------------------------------------+
+// [              end RETENTION end                 ]
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+
+
+
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+// [      DO NOT USE "-" IN YOUR LABEL NAMES        ]
+// [     GOOGLE DOES NOT HANDLE THEM CORRECTLY      ]
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+
+
+
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+// [               MESSAGE FILTERS                  ]
+// +------------------------------------------------+
+  /**
+    * syntax:
+    *
+    * Label: "string" // required for all rules
+    * 
+    * // one of these is required for the rule to function
+    * // defining more than one implies an "AND" relationship
+    * From: "string"
+    * To: "string"
+    * Subject: "string"
+    * Contains: "string"
+    * Header: "string" // only a single instance of arbitrary Header,Value allowed per rule
+    * Matches: ["string1","string2"]
+    *
+    * Attention: "[0-9]*[dmy]|0" // how long it will stay in the inbox
+    * Retention: "[0-9]*[dmy]|0" // how long before it gets deleted
+    *
+    * Archive:boolean
+    * MarkRead:boolean
+    * Delete:boolean
+    * Star:boolean
+    * Important:boolean
+    **/
+  MessageFilters = [
+    {Label:"Clients/ABCcorp", From:"@abccorp.com", Retention:"7y"},
+    {Label:"Workflow", From:"bugzilla", Subject:"needinfo", Important:true},
+
+    {Label:"notifications/Calendar", From:"calendar-notification@google.com", Attention:"1d", Retention:"5d"},
+
+    {Label:"Clients/ABCcorp", From:SFDC, Header:"X-SFDC-X-Account-Number", Matches:["123456"], Star:true },
+    {Label:"sbr/team", From:SFDC, Header:"X-SFDC-X-SBR-Group", Matches:["My Product"] },
+    {Label:"heat/sev1", From:SFDC, Header:"X-SFDC-X-Severity", Matches:["1 (Urgent)"], Important:true},
+  ];
+
+// +------------------------------------------------+
+// [           end MESSAGE FILTERS end              ]
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+
+
+
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+// [                 OTHER ACTIONS                  ]
+// +------------------------------------------------+
+
+//some mailing lists (especially google news alerts) arrive as mailing lists, but don't come in with sensible mailing list names
+  TagsToRename = [
+    {OldLabel:MAILING_LIST_PARENT_LABEL+"1234567890123456789.alerts.google.com",
+      NewLabel:MAILING_LIST_PARENT_LABEL+"tag_that_makes_sense"},
+  ];
+
+
+// +------------------------------------------------+
+// [             end OTHER ACTIONS end              ]
+// +~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~+
+
+} // end of setVariables
