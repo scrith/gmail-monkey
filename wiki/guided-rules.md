@@ -75,38 +75,3 @@ StandardMessageFilters = [
 ~~~
 
 Headers that do not exist for a given email, such as some X-Headers, being checked will simply not pass the match and the script will move on. They will not (should not) generate any exceptions.
-
-# AutomatedMessageFilters
-
-Automated messages are treated slightly differently from regular messages when processing the rules. And there is less options available They use a `Recipient` and a `Subject` field for filtering. It is the same as above: all rules must have a label.
-
-*In a future release these filters may be combined with the standard filters to provide more flexibility and reduce code complexity. However, that would be a breaking change to user's rules.*
-
-* `Label` - string
-* `Recipient` - string, the value to match against a combination of the "From" and "To" headers
-* `Archive` - boolean, same as standard filters
-* `Retention` - string, same as standard filters
-
-Common notifications are from JIRA, Errata, and Google calendar. These automated messages can be filtered using the example below. **Note**: the `AUTOMATED_PARENT_LABEL` exists in an array of labels that will be checked for empty children when pruning tags, if that feature is enabled. 
-
-~~~
-AutomatedMessageFilters=[
-    //default retention applies if not specified
-    {Label:AUTOMATED_PARENT_LABEL+"Calendar",
-        Recipient:"calendar-notification@google.com",
-        Retention:"5d"
-    },
-    {Label:AUTOMATED_PARENT_LABEL+"JIRA",
-        Recipient:"issues@jboss.org"
-    },
-    {Label:AUTOMATED_PARENT_LABEL+"Errata",
-        Recipient:"errata@redhat.com",
-    },
-];
-~~~
-
-This example will apply labels to each of these notifications, and in the case of calendar notifications, will also set a retention policy of 5 days.
-
-# SalesforceMessageFilters
-
-These filters work in the same way as the `StandardMessageFilters`, however they are only run against messages that come from the SFDC postmaster.
